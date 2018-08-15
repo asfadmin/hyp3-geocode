@@ -21,7 +21,7 @@ from makeAsfBrowse import makeAsfBrowse
 from osgeo import gdal
 from par_s1_slc_single import par_s1_slc_single
 from SLC_copy_S1_fullSW import SLC_copy_S1_fullSW
-
+from rtc2color import rtc2color
 
 # Convert corner points from geographic to UTM projection
 def geometry_geo2proj(lat_max,lat_min,lon_max,lon_min):
@@ -251,28 +251,45 @@ def create_xml(infile,height,type):
         g.close()
     os.chdir(back)
 
-def make_products(outfile,pol):
+def make_products(outfile,pol,cp=None):
 
-    # Create geotiff and ASF browse images
-    basename = "{out}_{pol}".format(out=outfile,pol=pol)
-    tiffile = "{}.tif".format(basename)
+    # Create greyscale geotiff and ASF browse images
+    tiffile = "{out}_{pol}.tif".format(out=outfile,pol=pol)
     ampfile = createAmp(tiffile,nodata=0)
     newfile = ampfile.replace(".tif","_sigma.tif")
     byteSigmaScale(ampfile,newfile)
-    os.remove(ampfile)
     makeAsfBrowse(newfile,outfile)
     os.remove(newfile)
+
+    # Create color ASF browse images
+    if cp is not None:
+        if pol == "vv":
+            basename = "{}_vh".format(outfile)
+        else:
+            basename = "{}_hv".format(outfile)
+        tiffile2  = "{}.tif".format(basename)
+        ampfile2 = createAmp(tiffile2,nodata=0)
+        outfile2 = ampfile2.replace(".tif","_rgb.tif")
+        threshold = -24 
+        rtc2color(ampfile,ampfile2, threshold, outfile2, amp=True, cleanup=True)
+        colorname = "{}_rgb".format(outfile)
+        makeAsfBrowse(outfile2,colorname)
+        os.remove(ampfile2)
+        os.remove(outfile2)
+
+    os.remove(ampfile)
+
+    # Move results to the PRODUCT directory
     if not os.path.isdir("PRODUCT"):
         os.mkdir("PRODUCT")
     for tiffile in glob.glob("*.tif"):
         shutil.move(tiffile,"PRODUCT")
     for txtfile in glob.glob("*_log.txt"):
         shutil.move(txtfile,"PRODUCT")
-    shutil.move("{}.png.aux.xml".format(outfile),"PRODUCT")
-    shutil.move("{}_large.png.aux.xml".format(outfile),"PRODUCT")
-    shutil.move("{}.png".format(outfile),"PRODUCT")
-    shutil.move("{}_large.png".format(outfile),"PRODUCT")
-    shutil.move("{}.kmz".format(outfile),"PRODUCT")
+    for pngfile in glob.glob("*.png*"):
+        shutil.move(pngfile,"PRODUCT")
+    for kmzfile in glob.glob("*.kmz"):
+        shutil.move(kmzfile,"PRODUCT")
 
 
 def geocode_sentinel(infile,outfile,pixel_size=30.0,height=0):
@@ -308,18 +325,21 @@ def geocode_sentinel(infile,outfile,pixel_size=30.0,height=0):
     hhlist = glob.glob("{}/*/*hh*.tiff".format(infile))
     hvlist = glob.glob("{}/*/*hv*.tiff".format(infile))
     
+    crossPol = None 
     if vvlist:
         pol = "vv"
         process_pol(pol,type,infile,outfile,pixel_size,height,switch=1)
         if vhlist:
-             process_pol("vh",type,infile,outfile,pixel_size,height,switch=2)     
+            process_pol("vh",type,infile,outfile,pixel_size,height,switch=2)     
+            crossPol = "vh"
     if hhlist:
         pol = "hh"
         process_pol(pol,type,infile,outfile,pixel_size,height,switch=1) 
         if hvlist:
             process_pol("hv",type,infile,outfile,pixel_size,height,switch=2)   
+            crossPol = "hv"
 	
-    make_products(outfile,pol)
+    make_products(outfile,pol,cp=crossPol)
     create_xml(infile,height,type)
     
 
