@@ -5,11 +5,12 @@ import argparse
 import shutil
 import zipfile
 import math
-import numpy as np
 import osr
 import glob
 import datetime
+import numpy as np
 import saa_func_lib as saa
+from osgeo import gdal
 from lxml import etree
 from byteSigmaScale import byteSigmaScale
 from createAmp import createAmp
@@ -18,44 +19,10 @@ from getSubSwath import get_bounding_box_file
 from execute import execute
 from getParameter import getParameter
 from makeAsfBrowse import makeAsfBrowse
-from osgeo import gdal
 from par_s1_slc_single import par_s1_slc_single
 from SLC_copy_S1_fullSW import SLC_copy_S1_fullSW
 from rtc2color import rtc2color
-
-# Convert corner points from geographic to UTM projection
-def geometry_geo2proj(lat_max,lat_min,lon_max,lon_min):
-    zone = get_zone(lon_min,lon_max) 
-    if (lat_min+lat_max)/2 > 0:
-        proj = ('326%02d' % int(zone))
-    else:
-        proj = ('327%02d' % int(zone))
-	
-    inSpatialRef = osr.SpatialReference()
-    inSpatialRef.ImportFromEPSG(4326)
-    outSpatialRef = osr.SpatialReference()
-    outSpatialRef.ImportFromEPSG(int(proj))
-    coordTrans = osr.CoordinateTransformation(inSpatialRef,outSpatialRef)
-  
-    x1, y1, h = coordTrans.TransformPoint(lon_max, lat_min)
-    logging.debug("Output coordinate: {} {} {}".format(x1,y1,h))
-    x2, y2, h = coordTrans.TransformPoint(lon_min, lat_min)
-    logging.debug("Output coordinate: {} {} {}".format(x2,y2,h))
-    x3, y3, h = coordTrans.TransformPoint(lon_max, lat_max)
-    logging.debug("Output coordinate: {} {} {}".format(x3,y3,h))
-    x4, y4, h = coordTrans.TransformPoint(lon_min, lat_max)
-    logging.debug("Output coordinate: {} {} {}".format(x4,y4,h))
-
-    y_min = min(y1,y2,y3,y4)
-    y_max = max(y1,y2,y3,y4)
-    x_min = min(x1,x2,x3,x4)
-    x_max = max(x1,x2,x3,x4)
-    
-    false_easting = outSpatialRef.GetProjParm(osr.SRS_PP_FALSE_EASTING)
-    false_northing = outSpatialRef.GetProjParm(osr.SRS_PP_FALSE_NORTHING)
-
-    return zone, false_northing, y_min, y_max, x_min, x_max
-
+from asf_geometry import geometry_geo2proj
 
 def create_dem_par(basename,dataType,pixel_size,lat_max,lat_min,lon_max,lon_min):
     demParIn = "{}_dem_par.in".format(basename)
@@ -225,7 +192,7 @@ def process_pol(pol,type,infile,outfile,pixel_size,height,switch=1):
     cmd = "data2geotiff {smap}.par {utm} 2 {tif}".format(smap=small_map,utm=utm,tif=tiffile)
     execute(cmd,uselogging=True)
 
-def create_xml(infile,height,type):
+def create_xml_files(infile,height,type):
     # Create XML metadata files
     cfgdir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, "config"))
     back = os.getcwd()
@@ -235,20 +202,43 @@ def create_xml(infile,height,type):
     time = now.strftime("%H%M%S")
     dt = now.strftime("%Y-%m-%dT%H:%M:%S")
     year = now.year
+
     for myfile in glob.glob("*.tif"):
         f = open("{}/GeocodingTemplate.xml".format(cfgdir),"r")
         g = open("{}.xml".format(myfile),"w")
         for line in f:
             line = line.replace("[DATE]",date)
             line = line.replace("[TIME]","{}00".format(time))
-	    line = line.replace("[DATETIME]",dt)
+            line = line.replace("[DATETIME]",dt)
             line = line.replace("[HEIGHT]","{}".format(height))
             line = line.replace("[YEARPROCESSED]","{}".format(year))
             line = line.replace("[YEARACQUIRED]",infile[17:21])
-	    line = line.replace("[TYPE]",type)
+            line = line.replace("[TYPE]",type)
             g.write("{}\n".format(line))
         f.close()
         g.close()
+
+    for myfile in glob.glob("*.png"):
+        if "_rgb_large.png" in myfile:
+            f = open("{}/GeocodingTemplate_rgb_large_png.xml".format(cfgdir),"r")
+        elif "_rgb.png" in myfile:
+            f = open("{}/GeocodingTemplate_rgb_png.xml".format(cfgdir),"r")
+        elif "_large.png" in myfile:
+            f = open("{}/GeocodingTemplate_large_png.xml".format(cfgdir),"r")
+        else:
+            f = open("{}/GeocodingTemplate_png.xml".format(cfgdir),"r")
+        g = open("{}.xml".format(myfile),"w")
+        for line in f:
+            line = line.replace("[DATE]",date)
+            line = line.replace("[TIME]","{}00".format(time))
+            line = line.replace("[DATETIME]",dt)
+            line = line.replace("[YEARPROCESSED]","{}".format(year))
+            line = line.replace("[YEARACQUIRED]",infile[17:21])
+            line = line.replace("[TYPE]",type)
+            g.write("{}\n".format(line))
+        f.close()
+        g.close()
+
     os.chdir(back)
 
 def make_products(outfile,pol,cp=None):
@@ -340,7 +330,7 @@ def geocode_sentinel(infile,outfile,pixel_size=30.0,height=0):
             crossPol = "hv"
 	
     make_products(outfile,pol,cp=crossPol)
-    create_xml(infile,height,type)
+    create_xml_files(infile,height,type)
     
 
 
@@ -353,7 +343,7 @@ if __name__ == '__main__':
   parser.add_argument("infile",help="Input zip file or SAFE directory")
   parser.add_argument("outfile",help="Name of output geocoded file")
   parser.add_argument("-t","--terrain_height",help="Average terrain height for geocoding",type=float,default=0.0)
-  parser.add_argument("-p","--pixel_size",help="Average terrain height for geocoding",type=float,default=30.0)
+  parser.add_argument("-p","--pixel_size",help="Pixel size for output product",type=float,default=30.0)
   args = parser.parse_args()
 
   logFile = "{}_{}_log.txt".format(args.outfile,os.getpid())
