@@ -187,15 +187,12 @@ def create_xml_files(infile,outfile,height,type,gamma0_flag):
     time = now.strftime("%H%M%S")
     dt = now.strftime("%Y-%m-%dT%H:%M:%S")
     year = now.year
+    encoded_jpg = pngtothumb("{}.png".format(outfile))
+
     if gamma0_flag:
         power_type = "gamma"
     else:
         power_type = "sigma"
-	
-    if os.path.isfile("{}_rgb.png".format(outfile)):
-        encoded_jpg = pngtothumb("{}_rgb.png".format(outfile))
-    else:
-        encoded_jpg = pngtothumb("{}.png".format(outfile))
     
     for myfile in glob.glob("*.tif"):
         f = open("{}/GeocodingTemplate.xml".format(cfgdir),"r")
@@ -218,7 +215,7 @@ def create_xml_files(infile,outfile,height,type,gamma0_flag):
             line = line.replace("[YEARPROCESSED]","{}".format(year))
             line = line.replace("[YEARACQUIRED]",infile[17:21])
             line = line.replace("[TYPE]",type)
-	    line = line.replace("[THUMBNAIL_BINARY_STRING]",encoded_jpg)
+            line = line.replace("[THUMBNAIL_BINARY_STRING]",encoded_jpg)
             line = line.replace("[POL]",pol)
             line = line.replace("[POWERTYPE]",power_type)
             g.write("{}\n".format(line))
@@ -226,14 +223,19 @@ def create_xml_files(infile,outfile,height,type,gamma0_flag):
         g.close()
 
     for myfile in glob.glob("*.png"):
-        if "_rgb_large.png" in myfile:
-            f = open("{}/GeocodingTemplate_rgb_large_png.xml".format(cfgdir),"r")
-        elif "_rgb.png" in myfile:
-            f = open("{}/GeocodingTemplate_rgb_png.xml".format(cfgdir),"r")
-        elif "_large.png" in myfile:
-            f = open("{}/GeocodingTemplate_large_png.xml".format(cfgdir),"r")
+    
+        if "rgb" in myfile:
+            f = open("{}/GeocodingTemplate_color_png.xml".format(cfgdir),"r")
+	    encoded_jpg = pngtothumb("{}_rgb.png".format(outfile))
         else:
-            f = open("{}/GeocodingTemplate_png.xml".format(cfgdir),"r")
+            f = open("{}/GeocodingTemplate_grayscale_png.xml".format(cfgdir),"r")
+	    encoded_jpg = pngtothumb("{}.png".format(outfile))
+
+        if "large" in myfile:  
+            res = "medium"
+        else:
+            res = "low"
+
         g = open("{}.xml".format(myfile),"w")
         for line in f:
             line = line.replace("[DATE]",date)
@@ -242,6 +244,8 @@ def create_xml_files(infile,outfile,height,type,gamma0_flag):
             line = line.replace("[YEARPROCESSED]","{}".format(year))
             line = line.replace("[YEARACQUIRED]",infile[17:21])
             line = line.replace("[TYPE]",type)
+            line = line.replace("[THUMBNAIL_BINARY_STRING]",encoded_jpg)
+            line = line.replace("[RES]",res)
             g.write("{}\n".format(line))
         f.close()
         g.close()
