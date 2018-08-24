@@ -5,12 +5,14 @@ import argparse
 import shutil
 import zipfile
 import math
-import numpy as np
 import osr
 import glob
 import datetime
-import saa_func_lib as saa
+import numpy as np
+from osgeo import gdal
 from lxml import etree
+
+import saa_func_lib as saa
 from byteSigmaScale import byteSigmaScale
 from createAmp import createAmp
 from get_zone import get_zone
@@ -18,44 +20,12 @@ from getSubSwath import get_bounding_box_file
 from execute import execute
 from getParameter import getParameter
 from makeAsfBrowse import makeAsfBrowse
-from osgeo import gdal
 from par_s1_slc_single import par_s1_slc_single
 from SLC_copy_S1_fullSW import SLC_copy_S1_fullSW
 from rtc2color import rtc2color
-
-# Convert corner points from geographic to UTM projection
-def geometry_geo2proj(lat_max,lat_min,lon_max,lon_min):
-    zone = get_zone(lon_min,lon_max) 
-    if (lat_min+lat_max)/2 > 0:
-        proj = ('326%02d' % int(zone))
-    else:
-        proj = ('327%02d' % int(zone))
-	
-    inSpatialRef = osr.SpatialReference()
-    inSpatialRef.ImportFromEPSG(4326)
-    outSpatialRef = osr.SpatialReference()
-    outSpatialRef.ImportFromEPSG(int(proj))
-    coordTrans = osr.CoordinateTransformation(inSpatialRef,outSpatialRef)
-  
-    x1, y1, h = coordTrans.TransformPoint(lon_max, lat_min)
-    logging.debug("Output coordinate: {} {} {}".format(x1,y1,h))
-    x2, y2, h = coordTrans.TransformPoint(lon_min, lat_min)
-    logging.debug("Output coordinate: {} {} {}".format(x2,y2,h))
-    x3, y3, h = coordTrans.TransformPoint(lon_max, lat_max)
-    logging.debug("Output coordinate: {} {} {}".format(x3,y3,h))
-    x4, y4, h = coordTrans.TransformPoint(lon_min, lat_max)
-    logging.debug("Output coordinate: {} {} {}".format(x4,y4,h))
-
-    y_min = min(y1,y2,y3,y4)
-    y_max = max(y1,y2,y3,y4)
-    x_min = min(x1,x2,x3,x4)
-    x_max = max(x1,x2,x3,x4)
-    
-    false_easting = outSpatialRef.GetProjParm(osr.SRS_PP_FALSE_EASTING)
-    false_northing = outSpatialRef.GetProjParm(osr.SRS_PP_FALSE_NORTHING)
-
-    return zone, false_northing, y_min, y_max, x_min, x_max
-
+from asf_geometry import geometry_geo2proj
+from getBursts import getBursts
+from make_arc_thumb import pngtothumb
 
 def create_dem_par(basename,dataType,pixel_size,lat_max,lat_min,lon_max,lon_min):
     demParIn = "{}_dem_par.in".format(basename)
@@ -119,26 +89,7 @@ def getFileType(myfile):
         type = "SLC"
     return(type)
 
-
-def getBursts(mydir,switch=1):
-    logging.info("Determining number of bursts")
-    back = os.getcwd()
-    burst_tab = "%s_burst_tab" % mydir[17:25]
-    if switch == 1:
-        f1 = open(burst_tab,"w")
-        os.chdir(os.path.join(mydir,"annotation"))
-        for name in ['001.xml','002.xml','003.xml']:
-            for myfile in os.listdir("."):
-                if name in myfile:
-                    root = etree.parse(myfile)
-                    for count in root.iter('burstList'):
-                        total_bursts=int(count.attrib['count'])
-                    f1.write("1 {}\n".format(total_bursts))
-        f1.close()
-        os.chdir(back)
-    return burst_tab 
-
-def process_pol(pol,type,infile,outfile,pixel_size,height,switch=1):
+def process_pol(pol,type,infile,outfile,pixel_size,height,make_tab_flag=True,gamma0_flag=False):
 
     logging.info("Processing the {} polarization".format(pol))
 
@@ -179,7 +130,7 @@ def process_pol(pol,type,infile,outfile,pixel_size,height,switch=1):
         #  Ingest SLC data files into gamma format
         par_s1_slc_single(infile,pol)
         date = infile[17:25]
-        burst_tab = getBursts(infile,switch)
+        burst_tab = getBursts(infile,make_tab_flag)
         shutil.copy(burst_tab,date)
 
         # Mosaic the swaths together and copy SLCs over        
@@ -197,6 +148,14 @@ def process_pol(pol,type,infile,outfile,pixel_size,height,switch=1):
         name = "{}.mli.par".format(date)
         shutil.move(name,"{}.par".format(mgrd))
 
+    if gamma0_flag:
+        # Convert sigma-0 to gamma-0
+        cmd = "radcal_MLI {mgrd} {mgrd}.par - {mgrd}.sigma - 0 0 -1".format(mgrd=mgrd)
+        execute(cmd,uselogging=True)
+        cmd = "radcal_MLI {mgrd}.sigma {mgrd}.par - {mgrd}.gamma - 0 0 2".format(mgrd=mgrd)
+        execute(cmd,uselogging=True)
+        shutil.move("{}.gamma".format(mgrd),mgrd)
+
     # Blank out the bad data at the left and right edges
     dsx = int(getParameter("{}.par".format(mgrd),"range_samples",uselogging=True))
     dsy = int(getParameter("{}.par".format(mgrd),"azimuth_lines",uselogging=True))
@@ -205,17 +164,10 @@ def process_pol(pol,type,infile,outfile,pixel_size,height,switch=1):
         blank_bad_data(mgrd, dsx, dsy, left=20, right=20)
 
     # Create geocoding look up table
-    # by running either gec_map or gec_map_grd
-
-    #
-    # This command doesn't work, keeps telling me no DEM overlap in longitude/easting!
-#    cmd = "gec_map_grd {mgrd}.par area_map.par {height} small_map.par small_map.utm_to_rdc - -".format(mgrd=mgrd,height=height)
-#    execute(cmd,uselogging=True)
-
     cmd = "gec_map {mgrd}.par - {amap} {height} {smap}.par {smap}.utm_to_rdc".format(amap=area_map,mgrd=mgrd,height=height,smap=small_map)
     execute(cmd,uselogging=True)
    
-    # Gecode the granule by running geocode_back
+    # Gecode the granule
     outSize = getParameter("{}.par".format(small_map),"width",uselogging=True)
     cmd = "geocode_back {mgrd} {dsx} {smap}.utm_to_rdc {utm} {os}".format(mgrd=mgrd,utm=utm,smap=small_map,dsx=dsx,os=outSize)
     execute(cmd,uselogging=True)
@@ -225,7 +177,7 @@ def process_pol(pol,type,infile,outfile,pixel_size,height,switch=1):
     cmd = "data2geotiff {smap}.par {utm} 2 {tif}".format(smap=small_map,utm=utm,tif=tiffile)
     execute(cmd,uselogging=True)
 
-def create_xml(infile,height,type):
+def create_xml_files(infile,outfile,height,type,gamma0_flag):
     # Create XML metadata files
     cfgdir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, "config"))
     back = os.getcwd()
@@ -235,20 +187,69 @@ def create_xml(infile,height,type):
     time = now.strftime("%H%M%S")
     dt = now.strftime("%Y-%m-%dT%H:%M:%S")
     year = now.year
+    encoded_jpg = pngtothumb("{}.png".format(outfile))
+
+    if gamma0_flag:
+        power_type = "gamma"
+    else:
+        power_type = "sigma"
+    
     for myfile in glob.glob("*.tif"):
         f = open("{}/GeocodingTemplate.xml".format(cfgdir),"r")
+        g = open("{}.xml".format(myfile),"w")
+	
+	if "vv" in myfile:
+	    pol = "vv"
+	elif "vh" in myfile:
+	    pol = "vh"
+	elif "hh" in myfile:
+	    pol = "hh"
+	elif "hv" in myfile:
+	    pol = "hv"
+	 
+        for line in f:
+            line = line.replace("[DATE]",date)
+            line = line.replace("[TIME]","{}00".format(time))
+            line = line.replace("[DATETIME]",dt)
+            line = line.replace("[HEIGHT]","{}".format(height))
+            line = line.replace("[YEARPROCESSED]","{}".format(year))
+            line = line.replace("[YEARACQUIRED]",infile[17:21])
+            line = line.replace("[TYPE]",type)
+            line = line.replace("[THUMBNAIL_BINARY_STRING]",encoded_jpg)
+            line = line.replace("[POL]",pol)
+            line = line.replace("[POWERTYPE]",power_type)
+            g.write("{}\n".format(line))
+        f.close()
+        g.close()
+
+    for myfile in glob.glob("*.png"):
+    
+        if "rgb" in myfile:
+            f = open("{}/GeocodingTemplate_color_png.xml".format(cfgdir),"r")
+	    encoded_jpg = pngtothumb("{}_rgb.png".format(outfile))
+        else:
+            f = open("{}/GeocodingTemplate_grayscale_png.xml".format(cfgdir),"r")
+	    encoded_jpg = pngtothumb("{}.png".format(outfile))
+
+        if "large" in myfile:  
+            res = "medium"
+        else:
+            res = "low"
+
         g = open("{}.xml".format(myfile),"w")
         for line in f:
             line = line.replace("[DATE]",date)
             line = line.replace("[TIME]","{}00".format(time))
-	    line = line.replace("[DATETIME]",dt)
-            line = line.replace("[HEIGHT]","{}".format(height))
+            line = line.replace("[DATETIME]",dt)
             line = line.replace("[YEARPROCESSED]","{}".format(year))
             line = line.replace("[YEARACQUIRED]",infile[17:21])
-	    line = line.replace("[TYPE]",type)
+            line = line.replace("[TYPE]",type)
+            line = line.replace("[THUMBNAIL_BINARY_STRING]",encoded_jpg)
+            line = line.replace("[RES]",res)
             g.write("{}\n".format(line))
         f.close()
         g.close()
+
     os.chdir(back)
 
 def make_products(outfile,pol,cp=None):
@@ -292,7 +293,7 @@ def make_products(outfile,pol,cp=None):
         shutil.move(kmzfile,"PRODUCT")
 
 
-def geocode_sentinel(infile,outfile,pixel_size=30.0,height=0):
+def geocode_sentinel(infile,outfile,pixel_size=30.0,height=0,gamma0_flag=False):
 
     if not os.path.exists(infile):
         logging.error("ERROR: Input file {} does not exist".format(infile))
@@ -320,6 +321,7 @@ def geocode_sentinel(infile,outfile,pixel_size=30.0,height=0):
     except:
         logging.warning("Unable to fetch precision state vectors... continuing")
     
+    # Get list of files to process
     vvlist = glob.glob("{}/*/*vv*.tiff".format(infile))
     vhlist = glob.glob("{}/*/*vh*.tiff".format(infile))
     hhlist = glob.glob("{}/*/*hh*.tiff".format(infile))
@@ -328,19 +330,19 @@ def geocode_sentinel(infile,outfile,pixel_size=30.0,height=0):
     crossPol = None 
     if vvlist:
         pol = "vv"
-        process_pol(pol,type,infile,outfile,pixel_size,height,switch=1)
+        process_pol(pol,type,infile,outfile,pixel_size,height,make_tab_flag=True,gamma0_flag=gamma0_flag)
         if vhlist:
-            process_pol("vh",type,infile,outfile,pixel_size,height,switch=2)     
+            process_pol("vh",type,infile,outfile,pixel_size,height,make_tab_flag=False,gamma0_flag=gamma0_flag)     
             crossPol = "vh"
     if hhlist:
         pol = "hh"
-        process_pol(pol,type,infile,outfile,pixel_size,height,switch=1) 
+        process_pol(pol,type,infile,outfile,pixel_size,height,make_tab_flag=True,gamma0_flag=gamma0_flag) 
         if hvlist:
-            process_pol("hv",type,infile,outfile,pixel_size,height,switch=2)   
+            process_pol("hv",type,infile,outfile,pixel_size,height,make_tab_flag=False,gamma0_flag=gamma0_flag)   
             crossPol = "hv"
 	
     make_products(outfile,pol,cp=crossPol)
-    create_xml(infile,height,type)
+    create_xml_files(infile,outfile,height,type,gamma0_flag)
     
 
 
@@ -353,7 +355,8 @@ if __name__ == '__main__':
   parser.add_argument("infile",help="Input zip file or SAFE directory")
   parser.add_argument("outfile",help="Name of output geocoded file")
   parser.add_argument("-t","--terrain_height",help="Average terrain height for geocoding",type=float,default=0.0)
-  parser.add_argument("-p","--pixel_size",help="Average terrain height for geocoding",type=float,default=30.0)
+  parser.add_argument("-p","--pixel_size",help="Pixel size for output product",type=float,default=30.0)
+  parser.add_argument("-g","--gamma0",action="store_true",help="Make output gamma0 instead of sigma0")
   args = parser.parse_args()
 
   logFile = "{}_{}_log.txt".format(args.outfile,os.getpid())
@@ -362,5 +365,5 @@ if __name__ == '__main__':
   logging.getLogger().addHandler(logging.StreamHandler())
   logging.info("Starting run")
 
-  geocode_sentinel(args.infile,args.outfile,height=args.terrain_height,pixel_size=args.pixel_size)
+  geocode_sentinel(args.infile,args.outfile,height=args.terrain_height,pixel_size=args.pixel_size,gamma0_flag=args.gamma0)
 
