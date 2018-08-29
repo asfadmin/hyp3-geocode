@@ -202,7 +202,7 @@ def create_xml_files(infile,outfile,height,type,gamma0_flag):
         power_type = "gamma"
     else:
         power_type = "sigma"
-    
+ 
     for myfile in glob.glob("*.tif"):
         f = open("{}/GeocodingTemplate.xml".format(cfgdir),"r")
         g = open("{}.xml".format(myfile),"w")
@@ -228,6 +228,7 @@ def create_xml_files(infile,outfile,height,type,gamma0_flag):
             line = line.replace("[POL]",pol)
             line = line.replace("[POWERTYPE]",power_type)
             line = line.replace("[GRAN_NAME]",granulename)
+            line = line.replace("[FORMAT]","power")
             g.write("{}\n".format(line))
         f.close()
         g.close()
@@ -256,6 +257,8 @@ def create_xml_files(infile,outfile,height,type,gamma0_flag):
             line = line.replace("[TYPE]",type)
             line = line.replace("[THUMBNAIL_BINARY_STRING]",encoded_jpg)
             line = line.replace("[RES]",res)
+            line = line.replace("[GRAN_NAME]",granulename)
+            line = line.replace("[FORMAT]","power")
             g.write("{}\n".format(line))
         f.close()
         g.close()
