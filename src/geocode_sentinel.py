@@ -20,8 +20,7 @@ from getSubSwath import get_bounding_box_file
 from execute import execute
 from getParameter import getParameter
 from makeAsfBrowse import makeAsfBrowse
-from par_s1_slc_single import par_s1_slc_single
-from SLC_copy_S1_fullSW import SLC_copy_S1_fullSW
+from ingest_S1_granule import ingest_S1_granule
 from rtc2color import rtc2color
 from asf_geometry import geometry_geo2proj
 from getBursts import getBursts
@@ -112,49 +111,7 @@ def process_pol(pol,type,infile,outfile,pixel_size,height,make_tab_flag=True,gam
         look_fact = 1 
 
     # Ingest the granule into gamma format
-    if "GRD" in type:
-        cmd = "par_S1_GRD {inf}/*/*{pol}*.tiff {inf}/*/*{pol}*.xml {inf}/*/*/calibration-*{pol}*.xml \
-              {inf}/*/*/noise-*{pol}*.xml {grd}.par {grd}".format(inf=infile,pol=pol,grd=grd)
-        execute(cmd,uselogging=True)
-	
-        # Update the state vectors
-        try:
-            for eoffile in glob.glob("*.EOF"):
-                logging.debug("Applying precision orbit information")
-                cmd = "S1_OPOD_vec {grd}.par {eof}".format(grd=grd,eof=eoffile)
-                execute(cmd,uselogging=True)
-        except:
-            logging.warning("Unable to get precision state vectors... continuing...")
-
-        # Multi-look the image
-        if look_fact > 1.0:
-            cmd = "multi_look_MLI {grd} {grd}.par {mgrd} {mgrd}.par {lks} {lks}".format(grd=grd,mgrd=mgrd,lks=look_fact)
-            execute(cmd,uselogging=True)
-        else:
-	    shutil.copy(grd,mgrd)
-            shutil.copy("{}.par".format(grd),"{}.par".format(mgrd))
-
-    else:
-        #  Ingest SLC data files into gamma format
-        par_s1_slc_single(infile,pol)
-        date = infile[17:25]
-        burst_tab = getBursts(infile,make_tab_flag)
-        shutil.copy(burst_tab,date)
-
-        # Mosaic the swaths together and copy SLCs over        
-        back = os.getcwd()
-        os.chdir(date) 
-        path = "../"
-        rlooks = look_fact*5
-        alooks = look_fact 
-        SLC_copy_S1_fullSW(path,date,"SLC_TAB",burst_tab,mode=2,raml=rlooks,azml=alooks)
-        os.chdir(back)
- 
-        # Rename files
-        name = "{}.mli".format(date)
-        shutil.move(name,mgrd)
-        name = "{}.mli.par".format(date)
-        shutil.move(name,"{}.par".format(mgrd))
+    ingest_S1_granule(infile,pol,look_fact,mgrd)
 
     if gamma0_flag:
         # Convert sigma-0 to gamma-0
