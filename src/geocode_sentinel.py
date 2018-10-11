@@ -15,7 +15,6 @@ from lxml import etree
 import saa_func_lib as saa
 from byteSigmaScale import byteSigmaScale
 from createAmp import createAmp
-from get_zone import get_zone
 from getSubSwath import get_bounding_box_file
 from execute import execute
 from getParameter import getParameter
