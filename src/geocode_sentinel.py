@@ -141,7 +141,7 @@ def process_pol(pol,type,infile,outfile,pixel_size,height,make_tab_flag=True,gam
     cmd = "data2geotiff {smap}.par {utm} 2 {tif}".format(smap=small_map,utm=utm,tif=tiffile)
     execute(cmd,uselogging=True)
 
-def create_xml_files(infile,outfile,height,type,gamma0_flag):
+def create_xml_files(infile,outfile,height,type,gamma0_flag,pixel_size):
     # Create XML metadata files
     cfgdir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, "config"))
     back = os.getcwd()
@@ -154,6 +154,12 @@ def create_xml_files(infile,outfile,height,type,gamma0_flag):
     encoded_jpg = pngtothumb("{}.png".format(outfile))
     basename = os.path.basename(infile)
     granulename = os.path.splitext(basename)[0]
+
+    if type == "SLC":
+        full_type = "Single-Look Complex"
+    else:
+        full_type = "Ground Range Detected"
+
     if gamma0_flag:
         power_type = "gamma"
     else:
@@ -180,6 +186,8 @@ def create_xml_files(infile,outfile,height,type,gamma0_flag):
             line = line.replace("[YEARPROCESSED]","{}".format(year))
             line = line.replace("[YEARACQUIRED]",infile[17:21])
             line = line.replace("[TYPE]",type)
+            line = line.replace("[FULL_TYPE]",full_type)
+            line = line.replace("[SPACING]","{}".format(int(pixel_size)))
             line = line.replace("[THUMBNAIL_BINARY_STRING]",encoded_jpg)
             line = line.replace("[POL]",pol)
             line = line.replace("[POWERTYPE]",power_type)
@@ -211,6 +219,7 @@ def create_xml_files(infile,outfile,height,type,gamma0_flag):
             line = line.replace("[YEARPROCESSED]","{}".format(year))
             line = line.replace("[YEARACQUIRED]",infile[17:21])
             line = line.replace("[TYPE]",type)
+            line = line.replace("[FULL_TYPE]",full_type)
             line = line.replace("[THUMBNAIL_BINARY_STRING]",encoded_jpg)
             line = line.replace("[RES]",res)
             line = line.replace("[GRAN_NAME]",granulename)
@@ -311,7 +320,7 @@ def geocode_sentinel(infile,outfile,pixel_size=30.0,height=0,gamma0_flag=False,p
             crossPol = "hv"
 	
     make_products(outfile,pol,cp=crossPol)
-    create_xml_files(infile,outfile,height,type,gamma0_flag)
+    create_xml_files(infile,outfile,height,type,gamma0_flag,pixel_size)
     
 
 
