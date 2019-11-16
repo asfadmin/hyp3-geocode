@@ -95,7 +95,8 @@ def getFileType(myfile):
         type = "SLC"
     return(type)
 
-def process_pol(pol,type,infile,outfile,pixel_size,height,make_tab_flag=True,gamma0_flag=False):
+def process_pol(pol,type,infile,outfile,pixel_size,height,make_tab_flag=True,gamma0_flag=False,
+                offset=None):
 
     logging.info("Processing the {} polarization".format(pol))
 
@@ -128,8 +129,12 @@ def process_pol(pol,type,infile,outfile,pixel_size,height,make_tab_flag=True,gam
         blank_bad_data(mgrd, dsx, dsy, left=20, right=20)
 
     # Create geocoding look up table
-    cmd = "gec_map {mgrd}.par - {amap} {height} {smap}.par {smap}.utm_to_rdc".format(amap=area_map,mgrd=mgrd,height=height,smap=small_map)
+    if offset:
+        cmd = "gec_map {mgrd}.par {off} {amap} {height} {smap}.par {smap}.utm_to_rdc".format(off=offset,amap=area_map,mgrd=mgrd,height=height,smap=small_map)
+    else:
+        cmd = "gec_map {mgrd}.par - {amap} {height} {smap}.par {smap}.utm_to_rdc".format(amap=area_map,mgrd=mgrd,height=height,smap=small_map)
     execute(cmd,uselogging=True)
+
    
     # Gecode the granule
     outSize = getParameter("{}.par".format(small_map),"width",uselogging=True)
@@ -271,7 +276,8 @@ def make_products(outfile,pol,cp=None):
         shutil.move(kmzfile,"PRODUCT")
 
 
-def geocode_sentinel(infile,outfile,pixel_size=30.0,height=0,gamma0_flag=False,post=None):
+def geocode_sentinel(infile,outfile,pixel_size=30.0,height=0,gamma0_flag=False,post=None,
+                     offset=None):
 
     if not os.path.exists(infile):
         logging.error("ERROR: Input file {} does not exist".format(infile))
@@ -308,15 +314,19 @@ def geocode_sentinel(infile,outfile,pixel_size=30.0,height=0,gamma0_flag=False,p
     crossPol = None 
     if vvlist:
         pol = "vv"
-        process_pol(pol,type,infile,outfile,pixel_size,height,make_tab_flag=True,gamma0_flag=gamma0_flag)
+        process_pol(pol,type,infile,outfile,pixel_size,height,make_tab_flag=True,gamma0_flag=gamma0_flag,
+                    offset=offset)
         if vhlist:
-            process_pol("vh",type,infile,outfile,pixel_size,height,make_tab_flag=False,gamma0_flag=gamma0_flag)     
+            process_pol("vh",type,infile,outfile,pixel_size,height,make_tab_flag=False,gamma0_flag=gamma0_flag,
+                        offset=offset)
             crossPol = "vh"
     if hhlist:
         pol = "hh"
-        process_pol(pol,type,infile,outfile,pixel_size,height,make_tab_flag=True,gamma0_flag=gamma0_flag) 
+        process_pol(pol,type,infile,outfile,pixel_size,height,make_tab_flag=True,gamma0_flag=gamma0_flag,
+                    offset=offset)
         if hvlist:
-            process_pol("hv",type,infile,outfile,pixel_size,height,make_tab_flag=False,gamma0_flag=gamma0_flag)   
+            process_pol("hv",type,infile,outfile,pixel_size,height,make_tab_flag=False,gamma0_flag=gamma0_flag,
+                        offset=offset)   
             crossPol = "hv"
 	
     make_products(outfile,pol,cp=crossPol)
@@ -336,6 +346,7 @@ if __name__ == '__main__':
   parser.add_argument("-s","--pixel_size",help="Pixel size for output product (default 30m)",type=float,default=30.0)
   parser.add_argument("-p","--post",help="Pixel posting for output product",type=float)
   parser.add_argument("-g","--gamma0",action="store_true",help="Make output gamma0 instead of sigma0")
+  parser.add_argument("-o","--offset",help="Optional offset file to use during geocoding") 
   args = parser.parse_args()
 
   logFile = "{}_{}_log.txt".format(args.outfile,os.getpid())
@@ -344,5 +355,6 @@ if __name__ == '__main__':
   logging.getLogger().addHandler(logging.StreamHandler())
   logging.info("Starting run")
 
-  geocode_sentinel(args.infile,args.outfile,height=args.terrain_height,pixel_size=args.pixel_size,gamma0_flag=args.gamma0,post=args.post)
+  geocode_sentinel(args.infile,args.outfile,height=args.terrain_height,pixel_size=args.pixel_size,
+                   gamma0_flag=args.gamma0,post=args.post,offset=args.offset)
 
