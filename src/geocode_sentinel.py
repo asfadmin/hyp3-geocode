@@ -259,7 +259,7 @@ def make_products(outfile,pol,cp=None):
         colorname = "{}_rgb".format(outfile)
         makeAsfBrowse(outfile2,colorname)
         os.remove(ampfile2)
-        os.remove(outfile2)
+#        os.remove(outfile2)
 
     os.remove(ampfile)
 
@@ -283,7 +283,7 @@ def geocode_sentinel(infile,outfile,pixel_size=30.0,height=0,gamma0_flag=False,p
         logging.error("ERROR: Input file {} does not exist".format(infile))
         exit(1)
     if "zip" in infile:
-        zip_ref = zipfile.ZipFile(myfile, 'r')
+        zip_ref = zipfile.ZipFile(infile, 'r')
         zip_ref.extractall(".")
         zip_ref.close()    
         infile = infile.replace(".zip",".SAFE")
