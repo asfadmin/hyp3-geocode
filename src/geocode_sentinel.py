@@ -297,14 +297,6 @@ def geocode_sentinel(infile,outfile,pixel_size=30.0,height=0,gamma0_flag=False,p
     demParIn = create_dem_par(area_map,"float",pixel_size,lat_max,lat_min,lon_max,lon_min,post)
     execute("create_dem_par {}.par < {}".format(area_map,demParIn),uselogging=True)
     
-    # Try to get the precision state vectors
-    try:
-        cmd = "get_orb.py {}".format(infile)
-        logging.info("Getting precision orbit information")
-        execute(cmd,uselogging=True)
-    except:
-        logging.warning("Unable to fetch precision state vectors... continuing")
-    
     # Get list of files to process
     vvlist = glob.glob("{}/*/*vv*.tiff".format(infile))
     vhlist = glob.glob("{}/*/*vh*.tiff".format(infile))
