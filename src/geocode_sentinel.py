@@ -343,7 +343,7 @@ if __name__ == '__main__':
 
   logFile = "{}_{}_log.txt".format(args.outfile,os.getpid())
   logging.basicConfig(filename=logFile,format='%(asctime)s - %(levelname)s - %(message)s',
-                        datefmt='%m/%d/%Y %I:%M:%S %p',level=logging.DEBUG)
+                        datefmt='%m/%d/%Y %I:%M:%S %p',level=logging.INFO)
   logging.getLogger().addHandler(logging.StreamHandler())
   logging.info("Starting run")
 
