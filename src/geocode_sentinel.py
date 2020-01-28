@@ -259,7 +259,7 @@ def make_products(outfile,pol,cp=None):
         colorname = "{}_rgb".format(outfile)
         makeAsfBrowse(outfile2,colorname)
         os.remove(ampfile2)
-        os.remove(outfile2)
+#        os.remove(outfile2)
 
     os.remove(ampfile)
 
@@ -283,7 +283,7 @@ def geocode_sentinel(infile,outfile,pixel_size=30.0,height=0,gamma0_flag=False,p
         logging.error("ERROR: Input file {} does not exist".format(infile))
         exit(1)
     if "zip" in infile:
-        zip_ref = zipfile.ZipFile(myfile, 'r')
+        zip_ref = zipfile.ZipFile(infile, 'r')
         zip_ref.extractall(".")
         zip_ref.close()    
         infile = infile.replace(".zip",".SAFE")
@@ -296,14 +296,6 @@ def geocode_sentinel(infile,outfile,pixel_size=30.0,height=0,gamma0_flag=False,p
     area_map = "{}_area_map".format(outfile)
     demParIn = create_dem_par(area_map,"float",pixel_size,lat_max,lat_min,lon_max,lon_min,post)
     execute("create_dem_par {}.par < {}".format(area_map,demParIn),uselogging=True)
-    
-    # Try to get the precision state vectors
-    try:
-        cmd = "get_orb.py {}".format(infile)
-        logging.info("Getting precision orbit information")
-        execute(cmd,uselogging=True)
-    except:
-        logging.warning("Unable to fetch precision state vectors... continuing")
     
     # Get list of files to process
     vvlist = glob.glob("{}/*/*vv*.tiff".format(infile))
