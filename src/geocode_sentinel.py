@@ -259,7 +259,7 @@ def make_products(outfile,pol,cp=None):
         # Direct call to rtc2color overran the memory (128 GB)
         #        rtc2color(ampfile,ampfile2, threshold, outfile2, amp=True, cleanup=True)
         # Trying this instead
-        cmd = "rtc2color -amp -cleanup {fp} {cp} {th} {out}".format(fp=ampfile,cp=ampfile2,th=threshold,out=outfile2)
+        cmd = "rtc2color.py -amp -cleanup {fp} {cp} {th} {out}".format(fp=ampfile,cp=ampfile2,th=threshold,out=outfile2)
         execute(cmd,uselogging=True)
 
         colorname = "{}_rgb".format(outfile)
