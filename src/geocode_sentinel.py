@@ -265,7 +265,7 @@ def make_products(outfile,pol,cp=None):
         colorname = "{}_rgb".format(outfile)
         makeAsfBrowse(outfile2,colorname)
         os.remove(ampfile2)
-#        os.remove(outfile2)
+        os.remove(outfile2)
 
     os.remove(ampfile)
 
