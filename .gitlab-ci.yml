@@ -121,7 +121,7 @@ gitleaks:
     - export LAST_TAG_HASH=$(git show-ref --hash -- $(git describe --abbrev=0))
     - echo -e '[whitelist]\ncommits = ["7aa31d31e3d00b5f1af81cd6f8c4840dfe066914",]\n' > gitleaks.toml
     # NOTE: commit range goes back into history; commit-from == HEAD by default
-    - gitleaks -v --repo-path=./ --commit-to="${LAST_TAG_HASH}" --report=gitleaks_report.json
+    - gitleaks -v --repo-path=./ --config=gitleaks.toml --commit-to="${LAST_TAG_HASH}" --report=gitleaks_report.json
   artifacts:
     when: on_failure
     paths:
