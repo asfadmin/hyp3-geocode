@@ -35,6 +35,7 @@ setup(
         'hyp3lib',
         'hyp3proclib',
         'importlib_metadata',
+        'numpy',
     ],
 
     extras_require={
@@ -51,7 +52,7 @@ setup(
 
     entry_points={'console_scripts': [
             'hyp3_geocode = hyp3_geocode.__main__:main',
-            'proc_geocode = hyp3_geocode.process:main',
+            'geocode_sentinel.py = hyp3_geocode.sentinel:main',
         ]
     },
 
