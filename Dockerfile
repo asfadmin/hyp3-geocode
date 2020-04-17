@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+FROM ubuntu:16.04
 
 # For opencontainers label definitions, see:
 #    https://github.com/opencontainers/image-spec/blob/master/annotations.md
@@ -30,7 +30,7 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y software-properti
 RUN pip3 install --upgrade pip && \
     python3 -m pip install --upgrade numpy scipy statsmodels scikit-image
 
-COPY GAMMA_SOFTWARE-20170707 /opt/gamma/
+COPY GAMMA_SOFTWARE-20170707 /usr/local/gamma/
 
 ARG S3_PYPI_HOST
 
@@ -43,18 +43,15 @@ ARG CONDA_UID=1000
 
 RUN groupadd -g "${CONDA_GID}" --system conda && \
     useradd -l -u "${CONDA_UID}" -g "${CONDA_GID}" --system -d /home/conda -m  -s /bin/bash conda && \
-    chown -R conda:conda /opt && \
-    echo "export GAMMA_HOME=/opt/gamma" >> /home/conda/.bashrc && \
-    echo "export MSP_HOME=$GAMMA_HOME/MSP" >> /home/conda/.bashrc && \
-    echo "export ISP_HOME=$GAMMA_HOME/ISP" >> /home/conda/.bashrc && \
-    echo "export DIFF_HOME=$GAMMA_HOME/DIFF" >> /home/conda/.bashrc && \
-    echo "export DISP_HOME=$GAMMA_HOME/DISP" >> /home/conda/.bashrc && \
-    echo "export LAT_HOME=$GAMMA_HOME/LAT" >> /home/conda/.bashrc && \
-    echo "export IPTA_HOME=$GAMMA_HOME/IPTA" >> /home/conda/.bashrc && \
-    echo "export GEO_HOME=$GAMMA_HOME/GEO" >> /home/conda/.bashrc && \
-    echo "export PATH=$PATH:$MSP_HOME/bin:$ISP_HOME/bin:$DIFF_HOME/bin:$LAT_HOME/bin:$DISP_HOME/bin:$IPTA_HOME/bin:$GEO_HOME/bin" >> /home/conda/.bashrc && \
-    echo "export PATH=$PATH:$MSP_HOME/scripts:$ISP_HOME/scripts:$DIFF_HOME/scripts:$LAT_HOME/scripts:$IPTA_HOME/scripts"  >> /home/conda/.bashrc && \
-    echo "export GAMMA_RASTER=BMP" >> /home/conda/.bashrc
+    echo 'export GAMMA_HOME=/usr/local/gamma' >> /home/conda/.bashrc && \
+    echo 'export MSP_HOME=$GAMMA_HOME/MSP' >> /home/conda/.bashrc && \
+    echo 'export ISP_HOME=$GAMMA_HOME/ISP' >> /home/conda/.bashrc && \
+    echo 'export DIFF_HOME=$GAMMA_HOME/DIFF' >> /home/conda/.bashrc && \
+    echo 'export DISP_HOME=$GAMMA_HOME/DISP' >> /home/conda/.bashrc && \
+    echo 'export LAT_HOME=$GAMMA_HOME/LAT' >> /home/conda/.bashrc && \
+    echo 'export PATH=$PATH:$MSP_HOME/bin:$ISP_HOME/bin:$DIFF_HOME/bin:$LAT_HOME/bin:$DISP_HOME/bin' >> /home/conda/.bashrc && \
+    echo 'export PATH=$PATH:$MSP_HOME/scripts:$ISP_HOME/scripts:$DIFF_HOME/scripts:$LAT_HOME/scripts'  >> /home/conda/.bashrc && \
+    echo 'export GAMMA_RASTER=BMP" >> /home/conda/.bashrc
 
 USER ${CONDA_UID}
 SHELL ["/bin/bash", "-l", "-c"]
