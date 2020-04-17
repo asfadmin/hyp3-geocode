@@ -21,18 +21,20 @@ ENV PYTHONDONTWRITEBYTECODE=true
 
 RUN apt-get update && apt-get upgrade -y && apt-get install -y software-properties-common && \
     add-apt-repository -y ppa:ubuntugis/ubuntugis-unstable && apt-get update && \
-    apt-get install -y unzip vim wget curl gdal-bin libgdal-dev gimp \
+    apt-get install -y unzip vim wget curl gdal-bin libgdal-dev libgdal1i gimp \
     gnuplot gnuplot-qt libblas-dev libblas3 libfftw3-dev \
     libgtk2.0-bin libgtk2.0-common libgtk2.0-dev libhdf5-dev \
     liblapack-dev liblapack3 python3-dev python3-pip python3-h5py python3-matplotlib python3-scipy && \
-    apt-get clean
-
-RUN pip3 install --upgrade pip && \
-    python3 -m pip install --upgrade numpy scipy statsmodels scikit-image
+    apt-get clean && pip3 install --upgrade pip
 
 COPY GAMMA_SOFTWARE-20170707 /usr/local/gamma/
 
 ARG S3_PYPI_HOST
+
+RUN export CPLUS_INCLUDE_PATH=/usr/include/gdal && \
+    export C_INCLUDE_PATH=/usr/include/gdal && \
+    python3 -m pip install --no-cache-dir GDAL==2.1.3 statsmodels==0.9 pandas==0.23
+
 
 RUN python3 -m pip install --no-cache-dir hyp3_geocode \
     --trusted-host "${S3_PYPI_HOST}" \
@@ -51,7 +53,7 @@ RUN groupadd -g "${CONDA_GID}" --system conda && \
     echo 'export LAT_HOME=$GAMMA_HOME/LAT' >> /home/conda/.bashrc && \
     echo 'export PATH=$PATH:$MSP_HOME/bin:$ISP_HOME/bin:$DIFF_HOME/bin:$LAT_HOME/bin:$DISP_HOME/bin' >> /home/conda/.bashrc && \
     echo 'export PATH=$PATH:$MSP_HOME/scripts:$ISP_HOME/scripts:$DIFF_HOME/scripts:$LAT_HOME/scripts'  >> /home/conda/.bashrc && \
-    echo 'export GAMMA_RASTER=BMP" >> /home/conda/.bashrc
+    echo 'export GAMMA_RASTER=BMP' >> /home/conda/.bashrc
 
 USER ${CONDA_UID}
 SHELL ["/bin/bash", "-l", "-c"]
