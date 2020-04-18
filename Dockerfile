@@ -44,20 +44,21 @@ ARG CONDA_GID=1000
 ARG CONDA_UID=1000
 
 RUN groupadd -g "${CONDA_GID}" --system conda && \
-    useradd -l -u "${CONDA_UID}" -g "${CONDA_GID}" --system -d /home/conda -m  -s /bin/bash conda && \
-    echo 'export GAMMA_HOME=/usr/local/gamma' >> /home/conda/.bashrc && \
-    echo 'export MSP_HOME=$GAMMA_HOME/MSP' >> /home/conda/.bashrc && \
-    echo 'export ISP_HOME=$GAMMA_HOME/ISP' >> /home/conda/.bashrc && \
-    echo 'export DIFF_HOME=$GAMMA_HOME/DIFF' >> /home/conda/.bashrc && \
-    echo 'export DISP_HOME=$GAMMA_HOME/DISP' >> /home/conda/.bashrc && \
-    echo 'export LAT_HOME=$GAMMA_HOME/LAT' >> /home/conda/.bashrc && \
-    echo 'export PATH=$PATH:$MSP_HOME/bin:$ISP_HOME/bin:$DIFF_HOME/bin:$LAT_HOME/bin:$DISP_HOME/bin' >> /home/conda/.bashrc && \
-    echo 'export PATH=$PATH:$MSP_HOME/scripts:$ISP_HOME/scripts:$DIFF_HOME/scripts:$LAT_HOME/scripts'  >> /home/conda/.bashrc && \
-    echo 'export GAMMA_RASTER=BMP' >> /home/conda/.bashrc
+    useradd -l -u "${CONDA_UID}" -g "${CONDA_GID}" --system -d /home/conda -m  -s /bin/bash conda
 
 USER ${CONDA_UID}
 SHELL ["/bin/bash", "-l", "-c"]
 ENV PYTHONDONTWRITEBYTECODE=true
+ENV GAMMA_HOME=/usr/local/gamma
+ENV MSP_HOME=$GAMMA_HOME/MSP
+ENV ISP_HOME=$GAMMA_HOME/ISP
+ENV DIFF_HOME=$GAMMA_HOME/DIFF
+ENV DISP_HOME=$GAMMA_HOME/DISP
+ENV LAT_HOME=$GAMMA_HOME/LAT
+ENV PATH=$PATH:$MSP_HOME/bin:$ISP_HOME/bin:$DIFF_HOME/bin:$LAT_HOME/bin:$DISP_HOME/bin
+ENV PATH=$PATH:$MSP_HOME/scripts:$ISP_HOME/scripts:$DIFF_HOME/scripts:$LAT_HOME/scripts
+ENV GAMMA_RASTER=BMP
+
 WORKDIR /home/conda/
 
 ENTRYPOINT ["/usr/local/bin/hyp3_geocode"]
