@@ -19,8 +19,7 @@ LABEL org.opencontainers.image.source="https://github.com/asfadmin/hyp3-geocode"
 ARG DEBIAN_FRONTEND=noninteractive
 ENV PYTHONDONTWRITEBYTECODE=true
 
-RUN apt-get update && apt-get upgrade -y && apt-get install -y software-properties-common && \
-    add-apt-repository -y ppa:ubuntugis/ubuntugis-unstable && apt-get update && \
+RUN apt-get update && apt-get upgrade -y && \
     apt-get install -y unzip vim wget curl gdal-bin libgdal-dev libgdal20 gimp \
     gnuplot  gnuplot-data gnuplot-qt libblas-dev libblas3 libfftw3-dev \
     libgtk2.0-bin libgtk2.0-common libgtk2.0-dev libhdf5-dev libhdf5-100 \
@@ -33,8 +32,7 @@ ARG S3_PYPI_HOST
 
 RUN export CPLUS_INCLUDE_PATH=/usr/include/gdal && \
     export C_INCLUDE_PATH=/usr/include/gdal && \
-    python3 -m pip install --no-cache-dir GDAL==2.1.3 statsmodels==0.9 pandas==0.23
-
+    python3 -m pip install --no-cache-dir GDAL==2.2.3 statsmodels==0.9 pandas==0.23
 
 RUN python3 -m pip install --no-cache-dir hyp3_geocode \
     --trusted-host "${S3_PYPI_HOST}" \
