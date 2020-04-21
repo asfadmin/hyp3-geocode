@@ -1,4 +1,4 @@
-FROM ubuntu:16.04
+FROM ubuntu:18.04
 
 # For opencontainers label definitions, see:
 #    https://github.com/opencontainers/image-spec/blob/master/annotations.md
@@ -21,13 +21,13 @@ ENV PYTHONDONTWRITEBYTECODE=true
 
 RUN apt-get update && apt-get upgrade -y && apt-get install -y software-properties-common && \
     add-apt-repository -y ppa:ubuntugis/ubuntugis-unstable && apt-get update && \
-    apt-get install -y unzip vim wget curl gdal-bin libgdal-dev libgdal1i gimp \
-    gnuplot gnuplot-qt libblas-dev libblas3 libfftw3-dev \
-    libgtk2.0-bin libgtk2.0-common libgtk2.0-dev libhdf5-dev \
+    apt-get install -y unzip vim wget curl gdal-bin libgdal-dev libgdal20 gimp \
+    gnuplot  gnuplot-data gnuplot-qt libblas-dev libblas3 libfftw3-dev \
+    libgtk2.0-bin libgtk2.0-common libgtk2.0-dev libhdf5-dev libhdf5-100 \
     liblapack-dev liblapack3 python3-dev python3-pip python3-h5py python3-matplotlib python3-scipy && \
     apt-get clean && pip3 install --upgrade pip
 
-COPY GAMMA_SOFTWARE-20170707 /usr/local/gamma/
+COPY GAMMA_SOFTWARE-20191203 /usr/local/GAMMA_SOFTWARE-20191203/
 
 ARG S3_PYPI_HOST
 
@@ -49,7 +49,7 @@ RUN groupadd -g "${CONDA_GID}" --system conda && \
 USER ${CONDA_UID}
 SHELL ["/bin/bash", "-l", "-c"]
 ENV PYTHONDONTWRITEBYTECODE=true
-ENV GAMMA_HOME=/usr/local/gamma
+ENV GAMMA_HOME=/usr/local/GAMMA_SOFTWARE-20191203
 ENV MSP_HOME=$GAMMA_HOME/MSP
 ENV ISP_HOME=$GAMMA_HOME/ISP
 ENV DIFF_HOME=$GAMMA_HOME/DIFF
