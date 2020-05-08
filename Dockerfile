@@ -24,17 +24,19 @@ RUN apt-get update && apt-get upgrade -y && \
     gnuplot  gnuplot-data gnuplot-qt libblas-dev libblas3 libfftw3-dev \
     libgtk2.0-bin libgtk2.0-common libgtk2.0-dev libhdf5-dev libhdf5-100 \
     liblapack-dev liblapack3 python3-dev python3-pip python3-h5py python3-matplotlib python3-scipy && \
-    apt-get clean && pip3 install --upgrade pip
+    apt-get clean && pip3 install --upgrade pip setuptools wheel
 
 COPY GAMMA_SOFTWARE-20191203 /usr/local/GAMMA_SOFTWARE-20191203/
 
-ARG S3_PYPI_HOST
 
 RUN export CPLUS_INCLUDE_PATH=/usr/include/gdal && \
     export C_INCLUDE_PATH=/usr/include/gdal && \
     python3 -m pip install --no-cache-dir GDAL==2.2.3 statsmodels==0.9 pandas==0.23
 
-RUN python3 -m pip install --no-cache-dir hyp3_geocode \
+ARG S3_PYPI_HOST
+ARG SDIST_SPEC
+
+RUN python3 -m pip install --no-cache-dir hyp3_geocode${SDIST_SPEC} \
     --trusted-host "${S3_PYPI_HOST}" \
     --extra-index-url "http://${S3_PYPI_HOST}"
 
@@ -60,4 +62,4 @@ ENV GAMMA_RASTER=BMP
 WORKDIR /home/conda/
 
 ENTRYPOINT ["/usr/local/bin/hyp3_geocode"]
-CMD ["-v"]
+CMD ["-h"]
