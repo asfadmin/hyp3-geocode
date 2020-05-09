@@ -1,0 +1,6 @@
+include LICENSE
+include README.md
+
+graft hyp3_geocode
+
+global-exclude *.py[cod] __pycache__ *.so
