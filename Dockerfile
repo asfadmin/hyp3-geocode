@@ -21,7 +21,7 @@ ENV PYTHONDONTWRITEBYTECODE=true
 
 RUN apt-get update && apt-get upgrade -y && \
     apt-get install -y --no-install-recommends \
-    unzip vim wget curl gdal-bin libgdal-dev libgdal20 gimp \
+    unzip vim wget curl build-essential gdal-bin libgdal-dev libgdal20 gcc gimp \
     gnuplot  gnuplot-data gnuplot-qt libblas-dev libblas3 libfftw3-dev \
     libgtk2.0-bin libgtk2.0-common libgtk2.0-dev libhdf5-dev libhdf5-100 \
     liblapack-dev liblapack3 python3-dev python3-pip python3-h5py python3-matplotlib python3-scipy && \
