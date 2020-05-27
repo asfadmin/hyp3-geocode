@@ -3,8 +3,8 @@ name: Test and build
 on:
   push:
     branches:
-    - master
-    - develop
+      - master
+      - develop
   pull_request:
     branches:
       - master
@@ -22,8 +22,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-        with:
-          fetch-depth: '0'
 
       - uses: goanpeca/setup-miniconda@v1
         with:
@@ -54,7 +52,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          fetch-depth: '0'
+          fetch-depth: 0
           token: ${{ secrets.TOOLS_BOT_PAK }}
 
       - name: Get associated PR
@@ -139,8 +137,6 @@ jobs:
     needs: package
     steps:
       - uses: actions/checkout@v2
-        with:
-          fetch-depth: '0'
 
       - uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -159,7 +155,6 @@ jobs:
           export SDIST_VERSION=${{ needs.package.outputs.SDIST_VERSION }}
           export CI_JOB_TIMESTAMP=$(date --utc --rfc-3339=seconds)
           echo "Building ${HYP3_REGISTRY}/${GITHUB_REPOSITORY##*/}:${SDIST_VERSION/+/_}"
-
           docker build --no-cache \
                 -t ${HYP3_REGISTRY}/${GITHUB_REPOSITORY##*/}:${SDIST_VERSION/+/_} \
                 --label org.opencontainers.image.created="${CI_JOB_TIMESTAMP}" \
@@ -167,7 +162,6 @@ jobs:
                 --label org.opencontainers.image.revision="${GITHUB_SHA}" \
                 --build-arg S3_PYPI_HOST=${S3_PYPI_HOST} \
                 --build-arg SDIST_SPEC="==${SDIST_VERSION}" .
-
           docker push ${HYP3_REGISTRY}/${GITHUB_REPOSITORY##*/}:${SDIST_VERSION/+/_}
 
       - name: Add test tag
