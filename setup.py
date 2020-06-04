@@ -44,8 +44,6 @@ setup(
             'pytest',
             'pytest-cov',
             'pytest-console-scripts',
-            'tox',
-            'tox-conda',
         ]
     },
 
