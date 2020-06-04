@@ -5,7 +5,8 @@ geocode processing for HyP3
 import os
 import shutil
 from datetime import datetime
-
+from hyp3lib import GranuleError
+from hyp3lib.metadata import add_esa_citation
 from hyp3proclib import (
     add_browse,
     build_output_name,
@@ -23,7 +24,7 @@ from hyp3proclib import (
     zip_dir
 )
 from hyp3proclib.db import get_db_connection
-from hyp3proclib.file_system import add_citation, cleanup_workdir
+from hyp3proclib.file_system import cleanup_workdir
 from hyp3proclib.logger import log
 from hyp3proclib.proc_base import Processor
 
@@ -199,7 +200,12 @@ def process_geocode_gamma(cfg, n):
             add_browse(cfg, 'LOW-RES', browse_path)
 
             find_browses(cfg, out_path)
-            add_citation(cfg, out_path)
+
+            try:
+                add_esa_citation(in_granule, out_path)
+            except GranuleError:
+                log.debug('Could not add ESA citation', exc_info=True)
+
             zip_dir(out_path, zip_file)
 
             cfg['final_product_size'] = [os.stat(zip_file).st_size, ]

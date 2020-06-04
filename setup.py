@@ -33,7 +33,7 @@ setup(
     python_requires='~=3.6',
 
     install_requires=[
-        'hyp3lib~=1.0',
+        'hyp3lib~=1.2',
         'hyp3proclib~=1.0',
         'importlib_metadata',
         'numpy',
