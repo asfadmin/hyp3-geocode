@@ -5,6 +5,7 @@ geocode processing for HyP3
 import os
 import shutil
 from datetime import datetime
+
 from hyp3lib import GranuleError
 from hyp3lib.metadata import add_esa_citation
 from hyp3proclib import (
