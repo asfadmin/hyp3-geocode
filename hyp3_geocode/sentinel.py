@@ -279,8 +279,8 @@ def geocode_sentinel(infile, outfile, pixel_size=30.0, height=0, gamma0_flag=Fal
     lat_max, lat_min, lon_max, lon_min = get_bounding_box_file(infile)
     logging.debug("Input Coordinates: {} {} {} {}".format(lat_max, lat_min, lon_max, lon_min))
     area_map = f"{outfile}_area_map"
-    demParIn = create_dem_par(area_map, "float", pixel_size, lat_max, lat_min, lon_max, lon_min, post)
-    execute(f"create_dem_par {area_map}.par < {demParIn}", uselogging=True)
+    dem_par_in = create_dem_par(area_map, "float", pixel_size, lat_max, lat_min, lon_max, lon_min, post)
+    execute(f"create_dem_par {area_map}.par < {dem_par_in}", uselogging=True)
 
     # Get list of files to process
     vvlist = glob.glob("{}/*/*vv*.tiff".format(infile))
