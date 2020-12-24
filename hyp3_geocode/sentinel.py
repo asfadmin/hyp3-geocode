@@ -118,9 +118,10 @@ def process_pol(pol, type_, infile, outfile, pixel_size, height, make_tab_flag=T
         blank_bad_data(mgrd, dsx, dsy, left=20, right=20)
 
     # Create geocoding look up table
-    if offset is None:
-        offset = '-'
-    execute(f"gec_map {mgrd}.par {offset} {area_map} {height} {small_map}.par {small_map}.utm_to_rdc", uselogging=True)
+    if make_tab_flag:
+        if offset is None:
+            offset = '-'
+        execute(f"gec_map {mgrd}.par {offset} {area_map} {height} {small_map}.par {small_map}.utm_to_rdc", uselogging=True)
 
     # Gecode the granule
     out_size = getParameter("{small_map}.par".format(small_map=small_map), "width", uselogging=True)
